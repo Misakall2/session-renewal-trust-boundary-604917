@@ -450,6 +450,13 @@ If you have an authenticated user you want to attach to the current session
     Note that any data set during the anonymous session is retained in the
     session after a user logs in.
 
+    The authentication backend is part of the authenticated identity stored in
+    the session. Logging in again for the same user with the same session auth
+    hash keeps the existing session and its data. Logging in through a
+    different authentication backend starts a new session: the previous session
+    data is discarded and the previous session identifier becomes invalid once
+    the new session has been stored.
+
     This example shows how you might use both
     :func:`~django.contrib.auth.authenticate` and
     :func:`~django.contrib.auth.login`::

@@ -137,6 +137,11 @@ Minor features
 * The default iteration count for the PBKDF2 password hasher is increased from
   1,500,000 to 1,800,000.
 
+* :func:`~django.contrib.auth.login` and
+  :func:`~django.contrib.auth.alogin` now treat the authentication backend as
+  part of the authenticated identity: logging in the same user with a different
+  backend starts a new session instead of reusing the existing one.
+
 :mod:`django.contrib.contenttypes`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

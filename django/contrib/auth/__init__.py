@@ -173,6 +173,9 @@ def login(request, user, backend=None):
     the anonymous session is retained when the user logs in.
     """
     session_auth_hash = user.get_session_auth_hash()
+    # Resolve the backend first: a backend configuration error must leave the
+    # currently valid session untouched.
+    backend = _get_backend_from_user(user=user, backend=backend)
 
     if SESSION_KEY in request.session:
         if _get_user_session_key(request) != user.pk or (
@@ -185,10 +188,19 @@ def login(request, user, backend=None):
             # session if the existing session corresponds to a different
             # authenticated user.
             request.session.flush()
+        elif request.session.get(BACKEND_SESSION_KEY) != backend:
+            # The authentication backend is part of the authenticated
+            # identity. Switching it starts a new session and discards the
+            # previous session data. Clearing first and then cycling the key
+            # creates the replacement session before the old key is deleted,
+            # so the old identifier only becomes invalid once the new session
+            # has been stored.
+            request.session.clear()
+            request.session.cycle_key()
+        # Otherwise it's a recurring login for the same identity: keep the
+        # session data and the session key.
     else:
         request.session.cycle_key()
-
-    backend = _get_backend_from_user(user=user, backend=backend)
 
     request.session[SESSION_KEY] = user._meta.pk.value_to_string(user)
     request.session[BACKEND_SESSION_KEY] = backend
@@ -201,6 +213,9 @@ def login(request, user, backend=None):
 async def alogin(request, user, backend=None):
     """See login()."""
     session_auth_hash = user.get_session_auth_hash()
+    # Resolve the backend first: a backend configuration error must leave the
+    # currently valid session untouched.
+    backend = _get_backend_from_user(user=user, backend=backend)
 
     if await request.session.ahas_key(SESSION_KEY):
         if await _aget_user_session_key(request) != user.pk or (
@@ -214,10 +229,19 @@ async def alogin(request, user, backend=None):
             # session if the existing session corresponds to a different
             # authenticated user.
             await request.session.aflush()
+        elif await request.session.aget(BACKEND_SESSION_KEY) != backend:
+            # The authentication backend is part of the authenticated
+            # identity. Switching it starts a new session and discards the
+            # previous session data. Clearing first and then cycling the key
+            # creates the replacement session before the old key is deleted,
+            # so the old identifier only becomes invalid once the new session
+            # has been stored.
+            request.session.clear()
+            await request.session.acycle_key()
+        # Otherwise it's a recurring login for the same identity: keep the
+        # session data and the session key.
     else:
         await request.session.acycle_key()
-
-    backend = _get_backend_from_user(user=user, backend=backend)
 
     await request.session.aset(SESSION_KEY, user._meta.pk.value_to_string(user))
     await request.session.aset(BACKEND_SESSION_KEY, backend)
